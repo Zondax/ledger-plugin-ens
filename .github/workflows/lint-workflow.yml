@@ -8,10 +8,6 @@ on:
       - master
       - develop
   pull_request:
-      branches:
-      - main
-      - master
-      - develop
 
 jobs:
   job_lint:

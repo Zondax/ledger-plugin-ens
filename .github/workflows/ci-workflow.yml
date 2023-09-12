@@ -8,10 +8,6 @@ on:
       - master
       - develop
   pull_request:
-      branches:
-      - main
-      - master
-      - develop
 
 jobs:
   job_build_release_plugin:
@@ -25,6 +21,8 @@ jobs:
             name: "nanox"
           - sdk: "$NANOSP_SDK"
             name: "nanosp"
+          - sdk: "$STAX_SDK"
+            name: "stax"
 
     runs-on: ubuntu-latest
     container:
@@ -163,4 +161,4 @@ jobs:
 
       - name: Run Zemu tests
         run: |
-          cd tests && docker pull zondax/builder-zemu@sha256:8d7b06cedf2d018b9464f4af4b7a8357c3fbb180f3ab153f8cb8f138defb22a4 && yarn test
+          cd tests && yarn test
