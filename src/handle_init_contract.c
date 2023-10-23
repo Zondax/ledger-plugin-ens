@@ -53,7 +53,13 @@ void handle_init_contract(void *parameters) {
         case SET_OWNER:
         case SET_RESOLVER:
         case SET_SUBNODE:
+        case SET_CONTENT_HASH:
+        case SET_ADDR:
+        case SET_TEXT:
             context->next_param = NODE;
+            break;
+        case MULTICALL:
+            context->next_param = CALL_OFFSET;
             break;
         default:
             PRINTF("Missing selectorIndex: %d\n", context->selectorIndex);
