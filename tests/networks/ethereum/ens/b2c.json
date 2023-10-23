@@ -85,6 +85,32 @@
           "plugin": "ENS"
         }
       }
+    },
+    {
+      "address": "0x231b0ee14048e9dccd1d247744d114a4eb5e8e63",
+      "contractName": "PublicResolver",
+      "selectors": {
+        "0x10f13a8c": {
+          "erc20OfInterest": [],
+          "method": "SetText",
+          "plugin": "ENS"
+        },
+        "0x8b95dd71": {
+          "erc20OfInterest": [],
+          "method": "SetAddr",
+          "plugin": "ENS"
+        },
+        "0xac9650d8": {
+          "erc20OfInterest": [],
+          "method": "Multicall",
+          "plugin": "ENS"
+        },
+        "0x304e6ade": {
+          "erc20OfInterest": [],
+          "method": "SetContentHash",
+          "plugin": "ENS"
+        }
+      }
     }
   ],
   "name": "ENS"
