@@ -44,6 +44,18 @@ void handle_query_contract_id(void *parameters) {
         case SET_SUBNODE:
             strlcpy(msg->version, "SetSubnode", msg->versionLength);
             break;
+        case SET_CONTENT_HASH:
+            strlcpy(msg->version, "SetContentHash", msg->versionLength);
+            break;
+        case SET_ADDR:
+            strlcpy(msg->version, "SetAddress", msg->versionLength);
+            break;
+        case SET_TEXT:
+            strlcpy(msg->version, "SetText", msg->versionLength);
+            break;
+        case MULTICALL:
+            strlcpy(msg->version, "Multicall", msg->versionLength);
+            break;
         default:
             PRINTF("Selector index: %d not supported\n", context->selectorIndex);
             msg->result = ETH_PLUGIN_RESULT_ERROR;

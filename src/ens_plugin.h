@@ -5,14 +5,15 @@
 #include <string.h>
 
 // Number of selectors defined in this plugin. Should match the enum `selector_t`.
-#define NUM_SELECTORS 11
+#define NUM_SELECTORS 15
 
 // Name of the plugin.
 #define PLUGIN_NAME "ENS"
 
 // Placeholder variant to be set when parsing is done but data is still being sent.
-#define NONE 17
+#define NONE 45
 
+#define HALF_PARAMETER_LENGTH 16
 // Enumeration of the different selectors possible.
 // Should follow the exact same order as the array declared in main.c
 typedef enum {
@@ -27,6 +28,10 @@ typedef enum {
     SET_OWNER,
     SET_RESOLVER,
     SET_SUBNODE,
+    SET_ADDR,
+    SET_TEXT,
+    MULTICALL,
+    SET_CONTENT_HASH
 } selector_t;
 
 // Enumeration used to parse the smart contract data.
@@ -42,11 +47,39 @@ typedef enum {
     INPUT,
     INPUT_OFFSET,
     PROOF_OFFSET,
+    PROOF,
+    PROOF_1,
+    PROOF_2,
+    PROOF_LEN,
     NODE,
     OWNER,
     LABEL,
     TTL,
     N_NAME,
+    COINTYPE,
+    NAME_OFFSET_1,
+    NAME_OFFSET_2,
+    VALUE,
+    KEY,
+    VALUE_OFFSET,
+    KEY_OFFSET,
+    VALUE_LENGTH,
+    KEY_LENGTH,
+    VALUE_1,
+    KEY_1,
+    VALUE_2,
+    KEY_2,
+    HASH,
+    HASH_OFFSET,
+    HASH_1,
+    HASH_2,
+    HASH_LEN,
+    CALL,
+    CALL_OFFSET,
+    CALL_1,
+    CALL_2,
+    CALL_LEN,
+    N_CALL,
     UNEXPECTED_PARAMETER,
 } parameter;
 
@@ -57,13 +90,16 @@ typedef struct {
 } address_t;
 
 typedef struct {
-    u_int16_t len;
-    u_int8_t text[PARAMETER_LENGTH + 1];
+    uint16_t len;
+    uint8_t text[PARAMETER_LENGTH + 1];
+    bool ellipsis;
 } name_t;
 
 typedef struct {
     uint8_t value[INT256_LENGTH];
+    bool ellipsis;
 } bytes32_t;
+
 typedef struct {
     union {
         struct {
@@ -78,9 +114,8 @@ typedef struct {
         } regist;
 
         struct {
-            name_t name;      // 32
-            address_t owner;  // 20
-            // duration_t duration; not enough space to present this
+            name_t name;         // 32
+            address_t owner;     // 20
             bytes32_t secret;    // 32
             address_t resolver;  // 20
             address_t addr;      // 20
@@ -97,14 +132,27 @@ typedef struct {
 
         struct {
             bytes32_t duration;
-            bytes32_t n_names;
+            uint16_t n_names;
+            name_t names[3];
+            uint8_t id;
         } renew_all;
 
         struct {
+            bytes32_t name;
+            uint16_t name_len;
+            bytes32_t proof;
+            uint16_t proof_offset;
+            uint16_t proof_len;
             bytes32_t n_inputs;
         } prove_claim;
 
         struct {
+            bytes32_t name;
+            uint16_t name_len;
+            bytes32_t proof;
+            uint16_t proof_offset;
+            uint16_t proof_len;
+            bytes32_t n_inputs;
             address_t resolver;
             address_t addr;
         } prove_claim_resolver;
@@ -127,6 +175,33 @@ typedef struct {
             bytes32_t node;
             address_t resolver;
         } set_resolver;
+
+        struct {
+            bytes32_t node;
+            bytes32_t coinType;
+            uint16_t a_len;
+            bytes32_t a;
+        } set_addr;
+
+        struct {
+            bytes32_t node;
+            name_t key;
+            name_t value;
+            uint16_t value_offset;
+        } set_text;
+
+        struct {
+            bytes32_t node;
+            uint16_t hash_len;
+            bytes32_t hash;
+        } set_content_hash;
+
+        struct {
+            uint16_t n_calls;
+            uint16_t call_len[4];
+            bytes32_t call[4];
+            uint8_t id;
+        } multicall;
     } body;
 } ens_tx_t;
 
