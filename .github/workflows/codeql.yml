@@ -15,6 +15,7 @@ on:
     # Excluded path: add the paths you want to ignore instead of deleting the workflow
     paths-ignore:
       - 'tests/*'
+      - '.github/workflows/*.yml'
 
 jobs:
   analyse:
