@@ -52,7 +52,7 @@ static uint32_t array_to_hexstr(char *dst,
     const char hexchars[] = "0123456789abcdef";
     int halfCount = count / 2;  // Calculate the middle point
 
-    for (uint8_t i = 0; i < halfCount; i++, src++) {
+    for (int i = 0; i < halfCount; i++, src++) {
         *dst++ = hexchars[*src >> 4u];
         *dst++ = hexchars[*src & 0x0Fu];
     }
@@ -64,7 +64,7 @@ static uint32_t array_to_hexstr(char *dst,
         *dst++ = '.';
     }
 
-    for (uint8_t i = halfCount; i < count; i++, src++) {
+    for (int i = halfCount; i < count; i++, src++) {
         *dst++ = hexchars[*src >> 4u];
         *dst++ = hexchars[*src & 0x0Fu];
     }
@@ -133,14 +133,12 @@ void handle_query_contract_ui(void *parameters) {
 
     switch (context->selectorIndex) {
         case COMMIT:
-            switch (msg->screenIndex) {
-                case 0:
-                    set_bytes32_ui(msg, &context->tx.body.commit.commitment, "Commitment");
-                    break;
-                default:
-                    PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+            if (msg->screenIndex == 0) {
+                set_bytes32_ui(msg, &context->tx.body.commit.commitment, "Commitment");
+            } else {
+                PRINTF("Received an invalid screenIndex\n");
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
             }
             break;
         case REGISTER:
@@ -207,14 +205,12 @@ void handle_query_contract_ui(void *parameters) {
             }
             break;
         case SET_NAME:
-            switch (msg->screenIndex) {
-                case 0:
-                    set_name_ui(msg, &context->tx.body.set_name.name, "Name");
-                    break;
-                default:
-                    PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+            if (msg->screenIndex == 0) {
+                set_name_ui(msg, &context->tx.body.set_name.name, "Name");
+            } else {
+                PRINTF("Received an invalid screenIndex\n");
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
             }
             break;
         case RENEW_ALL:
