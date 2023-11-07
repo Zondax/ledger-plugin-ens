@@ -23,7 +23,7 @@ jobs:
         with:
           repository: LedgerHQ/ethereum-plugin-sdk
           path: plugin-sdk
-          ref: master
+          ref: ${{ github.base_ref || github.ref_name }}
       - name: Comparing the SDK hash values
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"

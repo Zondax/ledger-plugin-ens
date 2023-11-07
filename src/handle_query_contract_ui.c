@@ -1,27 +1,30 @@
+#include <stdbool.h>
 #include "ens_plugin.h"
 
-void set_uint265_with_prefix(const uint8_t *amount,
-                             uint8_t amount_size,
-                             const char *unit,
-                             char *out_buffer,
-                             size_t out_buffer_size) {
+static bool set_uint265_with_prefix(const uint8_t *amount,
+                                    uint8_t amount_size,
+                                    const char *unit,
+                                    char *out_buffer,
+                                    size_t out_buffer_size) {
     char tmp_buffer[100] = {0};
 
     if (uint256_to_decimal(amount, amount_size, tmp_buffer, sizeof(tmp_buffer)) == false) {
-        THROW(EXCEPTION_OVERFLOW);
+        return false;
     }
 
     size_t result_len = strlen(tmp_buffer) + strlen(unit) + 1;  // +1 for the space
     if (out_buffer_size < result_len) {
-        THROW(EXCEPTION_OVERFLOW);
+        return false;
     }
 
     // Concatenate the amount string, space, and unit
     snprintf(out_buffer, out_buffer_size, "%s %s", tmp_buffer, unit);
+
+    return true;
 }
 
 // Set UI for any address screen.
-static void set_address_ui(ethQueryContractUI_t *msg, address_t *value) {
+static bool set_address_ui(ethQueryContractUI_t *msg, address_t *value) {
     // Prefix the address with `0x`.
     msg->msg[0] = '0';
     msg->msg[1] = 'x';
@@ -32,21 +35,21 @@ static void set_address_ui(ethQueryContractUI_t *msg, address_t *value) {
 
     // Get the string representation of the address stored in `context->beneficiary`. Put it in
     // `msg->msg`.
-    getEthAddressStringFromBinary(
+    return getEthAddressStringFromBinary(
         value->value,
         msg->msg + 2,  // +2 here because we've already prefixed with '0x'.
         msg->pluginSharedRW->sha3,
         chainid);
 }
 
-static uint32_t array_to_hexstr(char *dst,
-                                size_t dstLen,
-                                const uint8_t *src,
-                                uint16_t count,
-                                bool addEllipsis) {
+static bool array_to_hexstr(char *dst,
+                            size_t dstLen,
+                            const uint8_t *src,
+                            uint16_t count,
+                            bool addEllipsis) {
     memset(dst, 0, dstLen);
     if (dstLen < (count * 2 + 1)) {
-        return 0;
+        return false;
     }
 
     const char hexchars[] = "0123456789abcdef";
@@ -71,65 +74,68 @@ static uint32_t array_to_hexstr(char *dst,
 
     *dst = 0;  // terminate string
 
-    return (uint32_t) (count * 2 + (addEllipsis ? 3 : 0));
+    return true;
 }
 
-static void set_addr_ui(ethQueryContractUI_t *msg, address_t *address, const char *title) {
+static bool set_addr_ui(ethQueryContractUI_t *msg, address_t *address, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
-    set_address_ui(msg, address);
+    return set_address_ui(msg, address);
 }
 
-static void set_bytes32_ui(ethQueryContractUI_t *msg, bytes32_t *array, const char *title) {
+static bool set_bytes32_ui(ethQueryContractUI_t *msg, bytes32_t *array, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
-    array_to_hexstr(msg->msg, msg->msgLength, array->value, 32, array->ellipsis);
+    return array_to_hexstr(msg->msg, msg->msgLength, array->value, 32, array->ellipsis);
 }
 
-static void set_bytes_ui(ethQueryContractUI_t *msg,
+static bool set_bytes_ui(ethQueryContractUI_t *msg,
                          bytes32_t *array,
                          uint16_t src_len,
                          const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
 
-    array_to_hexstr(msg->msg,
-                    msg->msgLength,
-                    array->value,
-                    (src_len > PARAMETER_LENGTH) ? PARAMETER_LENGTH : src_len,
-                    array->ellipsis);
+    return array_to_hexstr(msg->msg,
+                           msg->msgLength,
+                           array->value,
+                           (src_len > PARAMETER_LENGTH) ? PARAMETER_LENGTH : src_len,
+                           array->ellipsis);
 }
 
-static void set_bytes32_as_int_ui(ethQueryContractUI_t *msg, bytes32_t *array, const char *title) {
+static bool set_bytes32_as_int_ui(ethQueryContractUI_t *msg, bytes32_t *array, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
-    uint256_to_decimal(array->value, sizeof(array->value), msg->msg, msg->msgLength);
+    return uint256_to_decimal(array->value, sizeof(array->value), msg->msg, msg->msgLength);
 }
 
-static void set_bytes32_as_int_unit_ui(ethQueryContractUI_t *msg,
+static bool set_bytes32_as_int_unit_ui(ethQueryContractUI_t *msg,
                                        bytes32_t *array,
                                        const char *title,
                                        const char *unit) {
     strlcpy(msg->title, title, msg->titleLength);
-    set_uint265_with_prefix(array->value, sizeof(array->value), unit, msg->msg, msg->msgLength);
+    return set_uint265_with_prefix(array->value,
+                                   sizeof(array->value),
+                                   unit,
+                                   msg->msg,
+                                   msg->msgLength);
 }
 
-static void set_name_ui(ethQueryContractUI_t *msg, name_t *name, const char *title) {
+static bool set_name_ui(ethQueryContractUI_t *msg, name_t *name, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
     if (name->ellipsis) {
         snprintf(msg->msg, msg->msgLength, "%.*s...%s", 16, name->text, name->text + 16);
+        return true;
     } else {
         snprintf(msg->msg, msg->msgLength, "%s", name->text);
+        return true;
     }
+    return false;
 }
 
-void handle_query_contract_ui(void *parameters) {
-    ethQueryContractUI_t *msg = (ethQueryContractUI_t *) parameters;
+void handle_query_contract_ui(ethQueryContractUI_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
-    // msg->title is the upper line displayed on the device.
-    // msg->msg is the lower line displayed on the device.
+    bool ret = false;
 
     // Clean the display fields.
     memset(msg->title, 0, msg->titleLength);
     memset(msg->msg, 0, msg->msgLength);
-
-    msg->result = ETH_PLUGIN_RESULT_OK;
 
     switch (context->selectorIndex) {
         case COMMIT:
@@ -137,85 +143,82 @@ void handle_query_contract_ui(void *parameters) {
                 set_bytes32_ui(msg, &context->tx.body.commit.commitment, "Commitment");
             } else {
                 PRINTF("Received an invalid screenIndex\n");
-                msg->result = ETH_PLUGIN_RESULT_ERROR;
-                return;
+                ret = false;
             }
             break;
         case REGISTER:
             switch (msg->screenIndex) {
                 case 0:
-                    set_name_ui(msg, &context->tx.body.regist.name, "Name");
+                    ret = set_name_ui(msg, &context->tx.body.regist.name, "Name");
                     break;
                 case 1:
-                    set_addr_ui(msg, &context->tx.body.regist.owner, "Owner");
+                    ret = set_addr_ui(msg, &context->tx.body.regist.owner, "Owner");
                     break;
                 case 2:
-                    set_bytes32_as_int_unit_ui(msg,
-                                               &context->tx.body.regist.duration,
-                                               "Duration",
-                                               "s");
+                    ret = set_bytes32_as_int_unit_ui(msg,
+                                                     &context->tx.body.regist.duration,
+                                                     "Duration",
+                                                     "s");
                     break;
                 case 3:
-                    set_bytes32_ui(msg, &context->tx.body.regist.secret, "Secret");
+                    ret = set_bytes32_ui(msg, &context->tx.body.regist.secret, "Secret");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case REGISTER_WITH_CONFIG:
             switch (msg->screenIndex) {
                 case 0:
-                    set_name_ui(msg, &context->tx.body.regist_with_config.name, "Name");
+                    ret = set_name_ui(msg, &context->tx.body.regist_with_config.name, "Name");
                     break;
                 case 1:
-                    set_addr_ui(msg, &context->tx.body.regist_with_config.owner, "Owner");
+                    ret = set_addr_ui(msg, &context->tx.body.regist_with_config.owner, "Owner");
                     break;
                 case 2:
-                    set_bytes32_ui(msg, &context->tx.body.regist_with_config.secret, "Secret");
+                    ret =
+                        set_bytes32_ui(msg, &context->tx.body.regist_with_config.secret, "Secret");
                     break;
                 case 3:
-                    set_addr_ui(msg, &context->tx.body.regist_with_config.resolver, "Resolver");
+                    ret =
+                        set_addr_ui(msg, &context->tx.body.regist_with_config.resolver, "Resolver");
                     break;
                 case 4:
-                    set_addr_ui(msg, &context->tx.body.regist_with_config.addr, "Addr");
+                    ret = set_addr_ui(msg, &context->tx.body.regist_with_config.addr, "Addr");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case RENEW:
             switch (msg->screenIndex) {
                 case 0:
-                    set_name_ui(msg, &context->tx.body.renew.name, "Name");
+                    ret = set_name_ui(msg, &context->tx.body.renew.name, "Name");
                     break;
                 case 1:
-                    set_bytes32_as_int_unit_ui(msg,
-                                               &context->tx.body.renew.duration,
-                                               "Duration",
-                                               "s");
+                    ret = set_bytes32_as_int_unit_ui(msg,
+                                                     &context->tx.body.renew.duration,
+                                                     "Duration",
+                                                     "s");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_NAME:
             if (msg->screenIndex == 0) {
-                set_name_ui(msg, &context->tx.body.set_name.name, "Name");
+                ret = set_name_ui(msg, &context->tx.body.set_name.name, "Name");
             } else {
                 PRINTF("Received an invalid screenIndex\n");
-                msg->result = ETH_PLUGIN_RESULT_ERROR;
-                return;
+                ret = false;
             }
             break;
         case RENEW_ALL:
             if (msg->screenIndex < context->tx.body.renew_all.n_names) {
-                set_name_ui(msg, &context->tx.body.renew_all.names[msg->screenIndex], "Name");
+                ret = set_name_ui(msg, &context->tx.body.renew_all.names[msg->screenIndex], "Name");
             } else if (msg->screenIndex == context->tx.body.renew_all.n_names) {
                 set_bytes32_as_int_unit_ui(msg,
                                            &context->tx.body.renew_all.duration,
@@ -223,181 +226,184 @@ void handle_query_contract_ui(void *parameters) {
                                            "s");
             } else {
                 PRINTF("Received an invalid screenIndex\n");
-                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                ret = false;
             }
 
             break;
         case PROVE_AND_CLAIM:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes_ui(msg,
-                                 &context->tx.body.prove_claim.name,
-                                 context->tx.body.prove_claim.name_len,
-                                 "Name");
+                    ret = set_bytes_ui(msg,
+                                       &context->tx.body.prove_claim.name,
+                                       context->tx.body.prove_claim.name_len,
+                                       "Name");
                     break;
                 case 1:
-                    set_bytes32_as_int_ui(msg,
-                                          &context->tx.body.prove_claim.n_inputs,
-                                          "Total Inputs");
+                    ret = set_bytes32_as_int_ui(msg,
+                                                &context->tx.body.prove_claim.n_inputs,
+                                                "Total Inputs");
                     break;
                 case 2:
-                    set_bytes_ui(msg,
-                                 &context->tx.body.prove_claim.proof,
-                                 context->tx.body.prove_claim.proof_len,
-                                 "Proof");
+                    ret = set_bytes_ui(msg,
+                                       &context->tx.body.prove_claim.proof,
+                                       context->tx.body.prove_claim.proof_len,
+                                       "Proof");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case PROVE_AND_CLAIM_RESOLVER:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes_ui(msg,
-                                 &context->tx.body.prove_claim_resolver.name,
-                                 context->tx.body.prove_claim_resolver.name_len,
-                                 "Name");
+                    ret = set_bytes_ui(msg,
+                                       &context->tx.body.prove_claim_resolver.name,
+                                       context->tx.body.prove_claim_resolver.name_len,
+                                       "Name");
                     break;
                 case 1:
-                    set_bytes32_as_int_ui(msg,
-                                          &context->tx.body.prove_claim_resolver.n_inputs,
-                                          "Total Inputs");
+                    ret = set_bytes32_as_int_ui(msg,
+                                                &context->tx.body.prove_claim_resolver.n_inputs,
+                                                "Total Inputs");
                     break;
                 case 2:
-                    set_bytes_ui(msg,
-                                 &context->tx.body.prove_claim_resolver.proof,
-                                 context->tx.body.prove_claim_resolver.proof_len,
-                                 "Proof");
+                    ret = set_bytes_ui(msg,
+                                       &context->tx.body.prove_claim_resolver.proof,
+                                       context->tx.body.prove_claim_resolver.proof_len,
+                                       "Proof");
                     break;
                 case 3:
-                    set_addr_ui(msg, &context->tx.body.prove_claim_resolver.resolver, "Resolver");
+                    ret = set_addr_ui(msg,
+                                      &context->tx.body.prove_claim_resolver.resolver,
+                                      "Resolver");
                     break;
                 case 4:
-                    set_addr_ui(msg, &context->tx.body.prove_claim_resolver.addr, "Addr");
+                    ret = set_addr_ui(msg, &context->tx.body.prove_claim_resolver.addr, "Addr");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_OWNER:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes32_ui(msg, &context->tx.body.set_owner.node, "Node");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_owner.node, "Node");
                     break;
                 case 1:
-                    set_addr_ui(msg, &context->tx.body.set_owner.owner, "Owner");
+                    ret = set_addr_ui(msg, &context->tx.body.set_owner.owner, "Owner");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_RESOLVER:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes32_ui(msg, &context->tx.body.set_resolver.node, "Node");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_resolver.node, "Node");
                     break;
                 case 1:
-                    set_addr_ui(msg, &context->tx.body.set_resolver.resolver, "Resolver");
+                    ret = set_addr_ui(msg, &context->tx.body.set_resolver.resolver, "Resolver");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_SUBNODE:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes32_ui(msg, &context->tx.body.set_subnode.node, "Node");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_subnode.node, "Node");
                     break;
                 case 1:
-                    set_bytes32_ui(msg, &context->tx.body.set_subnode.label, "Label");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_subnode.label, "Label");
                     break;
                 case 2:
-                    set_addr_ui(msg, &context->tx.body.set_subnode.owner, "Owner");
+                    ret = set_addr_ui(msg, &context->tx.body.set_subnode.owner, "Owner");
                     break;
                 case 3:
-                    set_addr_ui(msg, &context->tx.body.set_subnode.resolver, "Resolver");
+                    ret = set_addr_ui(msg, &context->tx.body.set_subnode.resolver, "Resolver");
                     break;
                 case 4:
-                    set_bytes32_as_int_unit_ui(msg, &context->tx.body.set_subnode.ttl, "TTL", "s");
+                    ret = set_bytes32_as_int_unit_ui(msg,
+                                                     &context->tx.body.set_subnode.ttl,
+                                                     "TTL",
+                                                     "s");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_ADDR:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes32_ui(msg, &context->tx.body.set_addr.node, "Node");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_addr.node, "Node");
                     break;
                 case 1:
-                    set_bytes32_as_int_ui(msg, &context->tx.body.set_addr.coinType, "Coin Type");
+                    ret = set_bytes32_as_int_ui(msg,
+                                                &context->tx.body.set_addr.coinType,
+                                                "Coin Type");
                     break;
                 case 2:
-                    set_bytes_ui(msg,
-                                 &context->tx.body.set_addr.a,
-                                 context->tx.body.set_addr.a_len,
-                                 "a");
+                    ret = set_bytes_ui(msg,
+                                       &context->tx.body.set_addr.a,
+                                       context->tx.body.set_addr.a_len,
+                                       "a");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_CONTENT_HASH:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes32_ui(msg, &context->tx.body.set_content_hash.node, "Node");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_content_hash.node, "Node");
                     break;
                 case 1:
-                    set_bytes_ui(msg,
-                                 &context->tx.body.set_content_hash.hash,
-                                 context->tx.body.set_content_hash.hash_len,
-                                 "Hash");
+                    ret = set_bytes_ui(msg,
+                                       &context->tx.body.set_content_hash.hash,
+                                       context->tx.body.set_content_hash.hash_len,
+                                       "Hash");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case SET_TEXT:
             switch (msg->screenIndex) {
                 case 0:
-                    set_bytes32_ui(msg, &context->tx.body.set_text.node, "Node");
+                    ret = set_bytes32_ui(msg, &context->tx.body.set_text.node, "Node");
                     break;
                 case 1:
-                    set_name_ui(msg, &context->tx.body.set_text.key, "Key");
+                    ret = set_name_ui(msg, &context->tx.body.set_text.key, "Key");
                     break;
                 case 2:
-                    set_name_ui(msg, &context->tx.body.set_text.value, "Value");
+                    ret = set_name_ui(msg, &context->tx.body.set_text.value, "Value");
                     break;
                 default:
                     PRINTF("Received an invalid screenIndex\n");
-                    msg->result = ETH_PLUGIN_RESULT_ERROR;
-                    return;
+                    ret = false;
             }
             break;
         case MULTICALL:
             if (msg->screenIndex < context->tx.body.multicall.n_calls) {
-                set_bytes_ui(msg,
-                             &context->tx.body.multicall.call[msg->screenIndex],
-                             context->tx.body.multicall.call_len[msg->screenIndex],
-                             "Call");
+                ret = set_bytes_ui(msg,
+                                   &context->tx.body.multicall.call[msg->screenIndex],
+                                   context->tx.body.multicall.call_len[msg->screenIndex],
+                                   "Call");
             } else {
                 PRINTF("Received an invalid screenIndex\n");
-                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                ret = false;
             }
             break;
+        default:
+            PRINTF("Selector index: %d not supported\n", context->selectorIndex);
+            ret = false;
     }
+    msg->result = ret ? ETH_PLUGIN_RESULT_OK : ETH_PLUGIN_RESULT_ERROR;
 }
