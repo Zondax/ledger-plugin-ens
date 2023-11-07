@@ -140,7 +140,7 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
     switch (context->selectorIndex) {
         case COMMIT:
             if (msg->screenIndex == 0) {
-                set_bytes32_ui(msg, &context->tx.body.commit.commitment, "Commitment");
+                ret = set_bytes32_ui(msg, &context->tx.body.commit.commitment, "Commitment");
             } else {
                 PRINTF("Received an invalid screenIndex\n");
                 ret = false;
@@ -220,10 +220,10 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
             if (msg->screenIndex < context->tx.body.renew_all.n_names) {
                 ret = set_name_ui(msg, &context->tx.body.renew_all.names[msg->screenIndex], "Name");
             } else if (msg->screenIndex == context->tx.body.renew_all.n_names) {
-                set_bytes32_as_int_unit_ui(msg,
-                                           &context->tx.body.renew_all.duration,
-                                           "Duration",
-                                           "s");
+                ret = set_bytes32_as_int_unit_ui(msg,
+                                                 &context->tx.body.renew_all.duration,
+                                                 "Duration",
+                                                 "s");
             } else {
                 PRINTF("Received an invalid screenIndex\n");
                 ret = false;
