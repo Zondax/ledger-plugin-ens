@@ -80,6 +80,7 @@ typedef enum {
     CALL_2,
     CALL_LEN,
     N_CALL,
+    OFFSETS,
     UNEXPECTED_PARAMETER,
 } parameter;
 
@@ -111,6 +112,7 @@ typedef struct {
             address_t owner;
             bytes32_t duration;
             bytes32_t secret;
+            uint16_t offset;
         } regist;
 
         struct {
@@ -119,42 +121,49 @@ typedef struct {
             bytes32_t secret;    // 32
             address_t resolver;  // 20
             address_t addr;      // 20
+            uint16_t offset;     // 2
         } regist_with_config;
 
         struct {
             name_t name;
             bytes32_t duration;
+            uint16_t offset;
         } renew;
 
         struct {
             name_t name;
+            uint16_t offset;
         } set_name;
 
         struct {
             bytes32_t duration;
             uint16_t n_names;
-            name_t names[3];
+            name_t names[2];
             uint8_t id;
+            uint16_t offsets[2];
+            uint16_t offsets_start;
         } renew_all;
 
         struct {
-            bytes32_t name;
-            uint16_t name_len;
-            bytes32_t proof;
-            uint16_t proof_offset;
-            uint16_t proof_len;
-            bytes32_t n_inputs;
+            bytes32_t name;         // 32
+            uint16_t name_len;      // 2
+            bytes32_t proof;        // 32
+            uint16_t proof_offset;  // 2
+            uint16_t proof_len;     // 2
+            bytes32_t n_inputs;     // 32
+            uint16_t name_offset;
+            uint16_t input_offset;
         } prove_claim;
 
         struct {
-            bytes32_t name;
-            uint16_t name_len;
-            bytes32_t proof;
-            uint16_t proof_offset;
-            uint16_t proof_len;
-            bytes32_t n_inputs;
-            address_t resolver;
-            address_t addr;
+            bytes32_t name;         // 32
+            uint16_t name_len;      // 2
+            bytes32_t proof;        // 32
+            uint16_t proof_offset;  // 2
+            uint16_t proof_len;     // 2
+            bytes32_t n_inputs;     // 32
+            address_t resolver;     // 20
+            address_t addr;         // 20
         } prove_claim_resolver;
 
         struct {
@@ -181,6 +190,7 @@ typedef struct {
             bytes32_t coinType;
             uint16_t a_len;
             bytes32_t a;
+            uint16_t hash_offset;
         } set_addr;
 
         struct {
@@ -188,19 +198,23 @@ typedef struct {
             name_t key;
             name_t value;
             uint16_t value_offset;
+            uint16_t key_offset;
         } set_text;
 
         struct {
             bytes32_t node;
             uint16_t hash_len;
             bytes32_t hash;
+            uint16_t hash_offset;
         } set_content_hash;
 
         struct {
             uint16_t n_calls;
-            uint16_t call_len[4];
-            bytes32_t call[4];
+            uint16_t call_len[3];
+            bytes32_t call[3];
             uint8_t id;
+            uint16_t offsets[3];
+            uint16_t offsets_start;
         } multicall;
     } body;
 } ens_tx_t;
