@@ -36,6 +36,10 @@ static void handle_register(ethPluginProvideParameter_t *msg, context_t *context
     }
     switch (context->next_param) {
         case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.regist.offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = OWNER;
             break;
         case OWNER:
@@ -59,6 +63,11 @@ static void handle_register(ethPluginProvideParameter_t *msg, context_t *context
             context->next_param = NAME_LENGTH;
             break;
         case NAME_LENGTH:
+            if (msg->parameterOffset != context->tx.body.regist.offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.regist.name.len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -155,6 +164,10 @@ static void handle_register_with_config(ethPluginProvideParameter_t *msg, contex
 
     switch (context->next_param) {
         case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.regist_with_config.offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = OWNER;
             break;
         case OWNER:
@@ -184,6 +197,12 @@ static void handle_register_with_config(ethPluginProvideParameter_t *msg, contex
             context->next_param = NAME_LENGTH;
             break;
         case NAME_LENGTH:
+            if (msg->parameterOffset !=
+                context->tx.body.regist_with_config.offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+
             if (!U2BE_from_parameter(msg->parameter,
                                      &context->tx.body.regist_with_config.name.len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
@@ -281,6 +300,10 @@ static void handle_renew(ethPluginProvideParameter_t *msg, context_t *context) {
     }
     switch (context->next_param) {
         case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.renew.offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = DURATION;
             break;
         case DURATION:
@@ -291,6 +314,10 @@ static void handle_renew(ethPluginProvideParameter_t *msg, context_t *context) {
             context->next_param = NAME_LENGTH;
             break;
         case NAME_LENGTH:
+            if (msg->parameterOffset != context->tx.body.renew.offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.renew.name.len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -388,9 +415,17 @@ static void handle_set_name(ethPluginProvideParameter_t *msg, context_t *context
     }
     switch (context->next_param) {
         case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_name.offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = NAME_LENGTH;
             break;
         case NAME_LENGTH:
+            if (msg->parameterOffset != context->tx.body.set_name.offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_name.name.len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -477,6 +512,7 @@ static void handle_set_name(ethPluginProvideParameter_t *msg, context_t *context
 
 static void handle_renew_all(ethPluginProvideParameter_t *msg, context_t *context) {
     uint16_t containers = 0;  // group of 32 bytes needed to hold name
+    uint16_t tmp_offset = 0;
 
     if (context->go_to_offset) {
         if (msg->parameterOffset != context->offset) {
@@ -486,6 +522,12 @@ static void handle_renew_all(ethPluginProvideParameter_t *msg, context_t *contex
     }
     switch (context->next_param) {
         case NAME_OFFSET:
+            // save temporarily the offset to check on the next parameter we are indeed in the right
+            // offset
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.renew_all.offsets_start)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = DURATION;
             break;
         case DURATION:
@@ -496,14 +538,38 @@ static void handle_renew_all(ethPluginProvideParameter_t *msg, context_t *contex
             context->next_param = N_NAME;
             break;
         case N_NAME:
+            if (msg->parameterOffset != context->tx.body.renew_all.offsets_start + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.renew_all.n_names) ||
-                context->tx.body.renew_all.n_names > 3) {
+                context->tx.body.renew_all.n_names > 2 || context->tx.body.renew_all.n_names == 0) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
             }
-            context->offset = msg->parameterOffset +
-                              ((context->tx.body.renew_all.n_names + 1) * PARAMETER_LENGTH);
-            context->go_to_offset = true;
-            context->next_param = NAME_LENGTH;
+            context->next_param = OFFSETS;
+            break;
+        case OFFSETS:
+            if (!U2BE_from_parameter(msg->parameter, &tmp_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+
+            // save offsets start point
+            if (context->tx.body.renew_all.id == 0) {
+                context->tx.body.renew_all.offsets_start = msg->parameterOffset;
+            }
+            // save offset and if not last one save next
+            context->tx.body.renew_all.offsets[context->tx.body.renew_all.id] = tmp_offset;
+            context->tx.body.renew_all.id++;
+            context->next_param = OFFSETS;
+            if (context->tx.body.renew_all.id == context->tx.body.renew_all.n_names) {
+                context->tx.body.renew_all.id = 0;
+                context->offset = context->tx.body.renew_all.offsets_start +
+                                  context->tx.body.renew_all.offsets[0];
+                context->go_to_offset = true;
+                context->next_param = NAME_LENGTH;
+            }
             break;
         case NAME_LENGTH:
             if (!U2BE_from_parameter(
@@ -514,6 +580,7 @@ static void handle_renew_all(ethPluginProvideParameter_t *msg, context_t *contex
             }
             context->next_param = NAME;
             break;
+
         case NAME:
             // Name has less then 32
             if (context->tx.body.renew_all.names[context->tx.body.renew_all.id].len <=
@@ -528,6 +595,10 @@ static void handle_renew_all(ethPluginProvideParameter_t *msg, context_t *contex
                     context->next_param = NONE;
                 } else {
                     context->tx.body.renew_all.id++;
+                    context->offset =
+                        context->tx.body.renew_all.offsets_start +
+                        context->tx.body.renew_all.offsets[context->tx.body.renew_all.id];
+                    context->go_to_offset = true;
                     context->next_param = NAME_LENGTH;
                 }
             } else {  // Name has more then 32 bytes
@@ -603,6 +674,9 @@ static void handle_renew_all(ethPluginProvideParameter_t *msg, context_t *contex
                 context->next_param = NONE;
             } else {
                 context->tx.body.renew_all.id++;
+                context->offset = context->tx.body.renew_all.offsets_start +
+                                  context->tx.body.renew_all.offsets[context->tx.body.renew_all.id];
+                context->go_to_offset = true;
                 context->next_param = NAME_LENGTH;
             }
             break;
@@ -627,9 +701,15 @@ static void handle_prove_claim(ethPluginProvideParameter_t *msg, context_t *cont
 
     switch (context->next_param) {
         case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.prove_claim.name_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+            }
             context->next_param = INPUT_OFFSET;
             break;
         case INPUT_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.prove_claim.input_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+            }
             context->next_param = PROOF_OFFSET;
             break;
         case PROOF_OFFSET:
@@ -639,6 +719,11 @@ static void handle_prove_claim(ethPluginProvideParameter_t *msg, context_t *cont
             }
             break;
         case NAME_LENGTH:
+            if (msg->parameterOffset != context->tx.body.prove_claim.name_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.prove_claim.name_len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -715,6 +800,10 @@ static void handle_prove_claim(ethPluginProvideParameter_t *msg, context_t *cont
             context->next_param = INPUT;
             break;
         case INPUT:
+            if (msg->parameterOffset != context->tx.body.prove_claim.input_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             copy_parameter(context->tx.body.prove_claim.n_inputs.value,
                            msg->parameter,
                            sizeof(context->tx.body.prove_claim.n_inputs.value));
@@ -808,6 +897,8 @@ static void handle_prove_claim(ethPluginProvideParameter_t *msg, context_t *cont
     }
 }
 
+uint16_t name_offset = 0;
+uint16_t input_offset = 0;
 static void handle_prove_claim_resolver(ethPluginProvideParameter_t *msg, context_t *context) {
     uint16_t containers = 0;  // group of 32 bytes needed to hold name
     if (context->go_to_offset) {
@@ -818,9 +909,15 @@ static void handle_prove_claim_resolver(ethPluginProvideParameter_t *msg, contex
     }
     switch (context->next_param) {
         case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &name_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+            }
             context->next_param = INPUT_OFFSET;
             break;
         case INPUT_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &input_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+            }
             context->next_param = PROOF_OFFSET;
             break;
         case PROOF_OFFSET:
@@ -843,6 +940,11 @@ static void handle_prove_claim_resolver(ethPluginProvideParameter_t *msg, contex
             context->next_param = NAME_LENGTH;
             break;
         case NAME_LENGTH:
+            if (msg->parameterOffset != name_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            name_offset = 0;
             if (!U2BE_from_parameter(msg->parameter,
                                      &context->tx.body.prove_claim_resolver.name_len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
@@ -922,6 +1024,11 @@ static void handle_prove_claim_resolver(ethPluginProvideParameter_t *msg, contex
             context->next_param = INPUT;
             break;
         case INPUT:
+            if (msg->parameterOffset != input_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            input_offset = 0;
             copy_parameter(context->tx.body.prove_claim_resolver.n_inputs.value,
                            msg->parameter,
                            sizeof(context->tx.body.prove_claim_resolver.n_inputs.value));
@@ -1136,9 +1243,17 @@ static void handle_set_addr(ethPluginProvideParameter_t *msg, context_t *context
             context->next_param = HASH_OFFSET;
             break;
         case HASH_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_addr.hash_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = HASH_LEN;
             break;
         case HASH_LEN:
+            if (msg->parameterOffset != context->tx.body.set_addr.hash_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_addr.a_len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -1242,12 +1357,24 @@ static void handle_set_text(ethPluginProvideParameter_t *msg, context_t *context
             context->next_param = KEY_OFFSET;
             break;
         case KEY_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_text.key_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = VALUE_OFFSET;
             break;
         case VALUE_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_text.value_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = KEY_LENGTH;
             break;
         case KEY_LENGTH:
+            if (msg->parameterOffset != context->tx.body.set_text.key_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_text.key.len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -1324,6 +1451,10 @@ static void handle_set_text(ethPluginProvideParameter_t *msg, context_t *context
             context->next_param = VALUE_LENGTH;
             break;
         case VALUE_LENGTH:
+            if (msg->parameterOffset != context->tx.body.set_text.value_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_text.value.len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -1426,9 +1557,19 @@ static void handle_set_content_hash(ethPluginProvideParameter_t *msg, context_t 
             context->next_param = HASH_OFFSET;
             break;
         case HASH_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter,
+                                     &context->tx.body.set_content_hash.hash_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = HASH_LEN;
             break;
         case HASH_LEN:
+            if (msg->parameterOffset !=
+                context->tx.body.set_content_hash.hash_offset + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.set_content_hash.hash_len)) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
                 return;
@@ -1519,6 +1660,7 @@ static void handle_set_content_hash(ethPluginProvideParameter_t *msg, context_t 
 
 static void handle_multicall(ethPluginProvideParameter_t *msg, context_t *context) {
     uint16_t containers = 0;  // group of 32 bytes needed to hold name
+    uint16_t tmp_offset = 0;
 
     if (context->go_to_offset) {
         if (msg->parameterOffset != context->offset) {
@@ -1528,21 +1670,49 @@ static void handle_multicall(ethPluginProvideParameter_t *msg, context_t *contex
     }
     switch (context->next_param) {
         case CALL_OFFSET:
+            // save temporarily the offset to check on the next parameter we are indeed in the right
+            // offset
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.multicall.offsets_start)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
             context->next_param = N_CALL;
             break;
         case N_CALL:
+            if (msg->parameterOffset != context->tx.body.multicall.offsets_start + SELECTOR_SIZE) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+
             if (!U2BE_from_parameter(msg->parameter, &context->tx.body.multicall.n_calls) ||
-                context->tx.body.multicall.n_calls > 4) {
+                context->tx.body.multicall.n_calls > 3 || context->tx.body.multicall.n_calls == 0) {
                 msg->result = ETH_PLUGIN_RESULT_ERROR;
             }
-            context->offset = msg->parameterOffset +
-                              ((1 + context->tx.body.multicall.n_calls) * PARAMETER_LENGTH);
-            context->go_to_offset = true;
-            context->next_param = CALL_LEN;
+            context->next_param = OFFSETS;
+            break;
+        case OFFSETS:
+            if (!U2BE_from_parameter(msg->parameter, &tmp_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
 
+            // save offsets start point
+            if (context->tx.body.multicall.id == 0) {
+                context->tx.body.multicall.offsets_start = msg->parameterOffset;
+            }
+            // save offset and if not last one save next
+            context->tx.body.multicall.offsets[context->tx.body.multicall.id] = tmp_offset;
+            context->tx.body.multicall.id++;
+            context->next_param = OFFSETS;
+            if (context->tx.body.multicall.id == context->tx.body.multicall.n_calls) {
+                context->tx.body.multicall.id = 0;
+                context->offset = context->tx.body.multicall.offsets_start +
+                                  context->tx.body.multicall.offsets[0];
+                context->go_to_offset = true;
+                context->next_param = CALL_LEN;
+            }
             break;
         case CALL_LEN:
-
             if (!U2BE_from_parameter(
                     msg->parameter,
                     &context->tx.body.multicall.call_len[context->tx.body.multicall.id])) {
@@ -1566,6 +1736,10 @@ static void handle_multicall(ethPluginProvideParameter_t *msg, context_t *contex
                     context->next_param = NONE;
                 } else {
                     context->tx.body.multicall.id++;
+                    context->offset =
+                        context->tx.body.multicall.offsets_start +
+                        context->tx.body.multicall.offsets[context->tx.body.multicall.id];
+                    context->go_to_offset = true;
                     context->next_param = CALL_LEN;
                 }
             } else {  // Name has more then 32 bytes
@@ -1644,6 +1818,9 @@ static void handle_multicall(ethPluginProvideParameter_t *msg, context_t *contex
                 context->next_param = NONE;
             } else {
                 context->tx.body.multicall.id++;
+                context->offset = context->tx.body.multicall.offsets_start +
+                                  context->tx.body.multicall.offsets[context->tx.body.multicall.id];
+                context->go_to_offset = true;
                 context->next_param = CALL_LEN;
             }
             break;
