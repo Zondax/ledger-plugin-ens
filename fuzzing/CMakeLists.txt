@@ -83,7 +83,7 @@ add_executable(fuzz
     fuzz_plugin.c
     mocks.c
 
-    ${SRC_DIR}/plugin.c
+    ${SRC_DIR}/contract.c
     ${SRC_DIR}/handle_init_contract.c
     ${SRC_DIR}/handle_provide_parameter.c
     ${SRC_DIR}/handle_finalize.c
