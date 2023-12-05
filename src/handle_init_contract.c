@@ -1,5 +1,15 @@
 #include "ens_plugin.h"
 
+static int find_selector(uint32_t selector, const uint32_t *selectors, size_t n, selector_t *out) {
+    for (selector_t i = 0; i < n; i++) {
+        if (selector == selectors[i]) {
+            *out = i;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 // Called once to init.
 void handle_init_contract(ethPluginInitContract_t *msg) {
     // Make sure we are running a compatible version.
@@ -21,16 +31,11 @@ void handle_init_contract(ethPluginInitContract_t *msg) {
     // Initialize the context (to 0).
     memset(context, 0, sizeof(*context));
 
-    uint8_t i;
-    for (i = 0; i < NUM_SELECTORS; i++) {
-        if (memcmp((uint8_t *) PIC(ENS_SELECTORS[i]), msg->selector, SELECTOR_SIZE) == 0) {
-            context->selectorIndex = i;
-            break;
-        }
-    }
-
-    if (i == NUM_SELECTORS) {
+    uint32_t selector = U4BE(msg->selector, 0);
+    if (find_selector(selector, ENS_SELECTORS, NUM_SELECTORS, &context->selectorIndex)) {
+        PRINTF("Error: selector not found!\n");
         msg->result = ETH_PLUGIN_RESULT_UNAVAILABLE;
+        return;
     }
 
     // Set `next_param` to be the first field we expect to parse.
