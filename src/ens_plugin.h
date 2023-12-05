@@ -84,7 +84,7 @@ typedef enum {
     UNEXPECTED_PARAMETER,
 } parameter;
 
-extern const uint8_t *const ENS_SELECTORS[NUM_SELECTORS];
+extern const uint32_t ENS_SELECTORS[NUM_SELECTORS];
 
 typedef struct {
     uint8_t value[ADDRESS_LENGTH];
