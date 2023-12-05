@@ -11,6 +11,11 @@ build/
 .idea/
 .vscode
 
+# Fuzzing
+fuzzing/build/
+fuzzing/corpus/
+fuzzing/out/
+
 # Python
 *.pyc[cod]
 *.egg
