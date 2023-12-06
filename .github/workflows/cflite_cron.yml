@@ -3,7 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main  # Use your actual default branch here.
+      - main
+      - develop
   schedule:
     - cron: '0 13 * * 6'  # At 01:00 PM, only on Saturday
 permissions: read-all
