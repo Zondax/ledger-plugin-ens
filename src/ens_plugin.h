@@ -236,4 +236,6 @@ typedef struct context_t {
 
 // Piece of code that will check that the above structure is not bigger than 5 * 32. Do not remove
 // this check.
+#ifndef BUILDING_FUZZER
 ASSERT_SIZEOF_PLUGIN_CONTEXT(context_t);
+#endif

@@ -105,5 +105,13 @@ add_executable(fuzz
     ${BOLOS_SDK}/lib_cxng/src/cx_ram.c
 )
 
+# Define a variable indicating whether BUILDING_FUZZER is enabled
+option(BUILDING_FUZZER "Build the fuzzer" ON)
+
+# Add a compile definition for BUILDING_FUZZER if it is enabled
+if(BUILDING_FUZZER)
+    target_compile_definitions(fuzz PRIVATE BUILDING_FUZZER=1)
+endif()
+
 target_compile_options(fuzz PUBLIC ${COMPILATION_FLAGS})
 target_link_options(fuzz PUBLIC ${COMPILATION_FLAGS})
