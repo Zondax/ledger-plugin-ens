@@ -7,7 +7,17 @@ This is a plugin for the Ethereum application which helps parsing and displaying
 
 ## Prerequisite
 
-To setup the working environment follow the steps on [ledger guide](https://developers.ledger.com/docs/dapp/embedded-plugin/environment-setup/).
+Clone the plugin to a new folder.
+
+```shell
+git clone https://github.com/libertify/ledger-plugin-ens.git
+```
+
+Then in the same folder clone the app-ethereum.
+
+```shell
+git clone --recurse-submodules https://github.com/LedgerHQ/app-ethereum.git     #app-ethereum
+```
 
 ## Documentation
 
@@ -52,28 +62,27 @@ Smart contracts covered by this plugin are:
 |Multicall*           |0xac9650d8|<table> <tbody> <tr><td><code>bytes calls</code></td></tr></tbody> </table>|
 
 
-*For renewAll, ENS plugin will only support signing transactions with 3 names maximum.
-For multicall, ENS plugin will only support signing transactions with 4 calls maximum.
+*For renewAll, ENS plugin will only support signing transactions with 2 names maximum.
+For multicall, ENS plugin will only support signing transactions with 3 calls maximum.
 For strings and byte arrays bigger then 32, plugin is showing the first and last 16 bytes in "16...16" format, due to memory limitations.
 
 ## Build
 
-To build the plugin, go back to your docker setup. Open a new terminal window, and in the plugin_dev/ folder, run
+To build the plugin, go to your folder with Ethereum app and plugin. Open a new terminal window and run:
 ```shell
-sudo docker run --rm -ti -v "$(realpath .):/app" --user $(id -u $USER):$(id -g $USER) ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest.
+sudo docker run --rm -ti -v "$(realpath .):/app" -v "$(realpath app-ethereum):/plugin_dev/app-ethereum" --user $(id -u $USER):$(id -g $USER) ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
 ```
 
 In the container, go to the plugin repository, then to the tests/ folder.
 ```shell
-cd app-plugin-boilerplate/tests
-./build_local_test_elfs.sh. 
+cd ledger-plugin-swell/tests
+./build_local_test_elfs.sh
 ```
-
 
 ## Tests
 
-To test the plugin go to the tests folder from the "app-plugin-ens" and run the script "test"
+To test the plugin go to the tests folder from the "ledger-plugin-swell" and run the script "test"
 ```shell
-cd app-plugin-ens/tests         # go to the tests folder in app-plugin-ens
+cd ledger-plugin-swell/tests         # go to the tests folder in ledger-plugin-swell
 yarn test                       # run the script test
 ```
