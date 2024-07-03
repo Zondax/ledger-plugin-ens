@@ -2,14 +2,41 @@
 from web3 import Web3
 from tests.utils import run_test, load_contract
 
-contract_eth_registrar = load_contract(
+contract_eth_registrar_old = load_contract(
     "283af0b28c62c092c9727f1ee09c02ca627eb7f5"
 )
 
+# From : https://etherscan.io/tx/0xea772f0f05543cc90e25a19997c0430d82e85331d45e2264603bc3cd2bbff434
 def test_commit(backend, firmware, navigator, test_name, wallet_addr):
     data = "0xf14fcbc86952f78134ad22871b951c2f5d1bab4f5f33359c35866dbbf2464993ee2b5589"
     run_test(
-        contract_eth_registrar, 
+        contract_eth_registrar_old, 
+        data, 
+        backend, 
+        firmware, 
+        navigator, 
+        test_name, 
+        wallet_addr
+    )
+
+# From : https://etherscan.io/tx/0x07528c73fe837a339e2f48188278e3f2fadabb8e56c7766ddadd69f3a009b0f5
+def test_register_with_config(backend, firmware, navigator, test_name, wallet_addr):
+    data = "0xf7a1696300000000000000000000000000000000000000000000000000000000000000c00000000000000000000000006e24b5365bb6dedb1e86b96124e25f5c6cd01bad0000000000000000000000000000000000000000000000000000000001e18558256bb9c92cf9b0ef511ce17c0401334a8238c521cb2e05e7939965b0465f33110000000000000000000000004976fb03c32e5b8cfe2b6ccb31c09ba78ebaba410000000000000000000000006e24b5365bb6dedb1e86b96124e25f5c6cd01bad000000000000000000000000000000000000000000000000000000000000000674757266696e0000000000000000000000000000000000000000000000000000"
+    run_test(
+        contract_eth_registrar_old, 
+        data, 
+        backend, 
+        firmware, 
+        navigator, 
+        test_name, 
+        wallet_addr
+    )
+
+# From : https://etherscan.io/tx/0x6792413131e66b71890dbf6484c1a73df539c91fe83a367fc53e0eca8825254b
+def test_register(backend, firmware, navigator, test_name, wallet_addr):
+    data = "0x85f6d1550000000000000000000000000000000000000000000000000000000000000080000000000000000000000000d7b460f56aaf1458523e9ac8edfa551598490c2800000000000000000000000000000000000000000000000000000000003026ef6aaf1458523e9ac8edfa551598490c2800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a3132333131313133313200000000000000000000000000000000000000000000"
+    run_test(
+        contract_eth_registrar_old, 
         data, 
         backend, 
         firmware, 

@@ -130,18 +130,22 @@ static bool set_bytes32_as_int_unit_ui(ethQueryContractUI_t *msg,
 static bool set_name_ui(ethQueryContractUI_t *msg, name_t *name, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
     if (name->ellipsis) {
-        char buffer[32];
-        strncpy(buffer, (const char *) name->text, 16);
-        buffer[16] = '\0';
-        strlcat(buffer, "...", sizeof(buffer));
-        strlcat(buffer, (const char *) (name->text + 16), sizeof(buffer));
-        strncpy(msg->msg, buffer, msg->msgLength - 1);
-        msg->msg[msg->msgLength - 1] = '\0';
+        memset(msg->msg, 0, msg->msgLength);
+
+        // Copy the first 16 characters of name->text to msg->msg
+        strncpy(msg->msg, (const char *) name->text, 16);
+
+        // Add the ellipsis
+        strncat(msg->msg, "...", msg->msgLength - strlen(msg->msg) - 1);
+
+        // Append the remaining text starting from the 17th character
+        strncat(msg->msg, (const char *) name->text + 16, msg->msgLength - strlen(msg->msg) - 1);
+        return true;
     } else {
         strncpy(msg->msg, (const char *) name->text, msg->msgLength - 1);
-        msg->msg[msg->msgLength - 1] = '\0';
+        return true;
     }
-    return true;
+    return false;
 }
 
 void handle_query_contract_ui(ethQueryContractUI_t *msg) {
