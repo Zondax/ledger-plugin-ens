@@ -1,4 +1,4 @@
-#include "ens_plugin.h"
+#include "plugin.h"
 
 uint8_t bytes_missing = 0;
 

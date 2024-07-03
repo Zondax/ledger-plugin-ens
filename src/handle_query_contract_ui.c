@@ -1,5 +1,4 @@
-#include <stdbool.h>
-#include "ens_plugin.h"
+#include "plugin.h"
 
 static bool set_uint265_with_prefix(const uint8_t *amount,
                                     uint8_t amount_size,
@@ -17,8 +16,20 @@ static bool set_uint265_with_prefix(const uint8_t *amount,
         return false;
     }
 
-    // Concatenate the amount string, space, and unit
-    snprintf(out_buffer, out_buffer_size, "%s %s", tmp_buffer, unit);
+    // Ensure the out_buffer is zeroed
+    memset(out_buffer, 0, out_buffer_size);
+
+    // Copy tmp_buffer to out_buffer
+    strncpy(out_buffer, tmp_buffer, out_buffer_size - 1);
+
+    // Ensure there is enough space for a space and at least one character from unit
+    size_t current_length = strlen(out_buffer);
+    if (current_length < out_buffer_size - 1) {
+        strncat(out_buffer, " ", out_buffer_size - current_length - 1);
+    }
+
+    // Concatenate unit to out_buffer
+    strncat(out_buffer, unit, out_buffer_size - strlen(out_buffer) - 1);
 
     return true;
 }
@@ -38,7 +49,6 @@ static bool set_address_ui(ethQueryContractUI_t *msg, address_t *value) {
     return getEthAddressStringFromBinary(
         value->value,
         msg->msg + 2,  // +2 here because we've already prefixed with '0x'.
-        msg->pluginSharedRW->sha3,
         chainid);
 }
 
@@ -120,13 +130,18 @@ static bool set_bytes32_as_int_unit_ui(ethQueryContractUI_t *msg,
 static bool set_name_ui(ethQueryContractUI_t *msg, name_t *name, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
     if (name->ellipsis) {
-        snprintf(msg->msg, msg->msgLength, "%.*s...%s", 16, name->text, name->text + 16);
-        return true;
+        char buffer[32];
+        strncpy(buffer, (const char *) name->text, 16);
+        buffer[16] = '\0';
+        strlcat(buffer, "...", sizeof(buffer));
+        strlcat(buffer, (const char *) (name->text + 16), sizeof(buffer));
+        strncpy(msg->msg, buffer, msg->msgLength - 1);
+        msg->msg[msg->msgLength - 1] = '\0';
     } else {
-        snprintf(msg->msg, msg->msgLength, "%s", name->text);
-        return true;
+        strncpy(msg->msg, (const char *) name->text, msg->msgLength - 1);
+        msg->msg[msg->msgLength - 1] = '\0';
     }
-    return false;
+    return true;
 }
 
 void handle_query_contract_ui(ethQueryContractUI_t *msg) {
