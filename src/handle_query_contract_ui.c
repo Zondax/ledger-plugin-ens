@@ -1,5 +1,4 @@
-#include <stdbool.h>
-#include "ens_plugin.h"
+#include "plugin.h"
 
 static bool set_uint265_with_prefix(const uint8_t *amount,
                                     uint8_t amount_size,
@@ -17,8 +16,20 @@ static bool set_uint265_with_prefix(const uint8_t *amount,
         return false;
     }
 
-    // Concatenate the amount string, space, and unit
-    snprintf(out_buffer, out_buffer_size, "%s %s", tmp_buffer, unit);
+    // Ensure the out_buffer is zeroed
+    memset(out_buffer, 0, out_buffer_size);
+
+    // Copy tmp_buffer to out_buffer
+    strncpy(out_buffer, tmp_buffer, out_buffer_size - 1);
+
+    // Ensure there is enough space for a space and at least one character from unit
+    size_t current_length = strlen(out_buffer);
+    if (current_length < out_buffer_size - 1) {
+        strncat(out_buffer, " ", out_buffer_size - current_length - 1);
+    }
+
+    // Concatenate unit to out_buffer
+    strncat(out_buffer, unit, out_buffer_size - strlen(out_buffer) - 1);
 
     return true;
 }
@@ -38,7 +49,6 @@ static bool set_address_ui(ethQueryContractUI_t *msg, address_t *value) {
     return getEthAddressStringFromBinary(
         value->value,
         msg->msg + 2,  // +2 here because we've already prefixed with '0x'.
-        msg->pluginSharedRW->sha3,
         chainid);
 }
 
@@ -120,10 +130,19 @@ static bool set_bytes32_as_int_unit_ui(ethQueryContractUI_t *msg,
 static bool set_name_ui(ethQueryContractUI_t *msg, name_t *name, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
     if (name->ellipsis) {
-        snprintf(msg->msg, msg->msgLength, "%.*s...%s", 16, name->text, name->text + 16);
+        memset(msg->msg, 0, msg->msgLength);
+
+        // Copy the first 16 characters of name->text to msg->msg
+        strncpy(msg->msg, (const char *) name->text, 16);
+
+        // Add the ellipsis
+        strncat(msg->msg, "...", msg->msgLength - strlen(msg->msg) - 1);
+
+        // Append the remaining text starting from the 17th character
+        strncat(msg->msg, (const char *) name->text + 16, msg->msgLength - strlen(msg->msg) - 1);
         return true;
     } else {
-        snprintf(msg->msg, msg->msgLength, "%s", name->text);
+        strncpy(msg->msg, (const char *) name->text, msg->msgLength - 1);
         return true;
     }
     return false;

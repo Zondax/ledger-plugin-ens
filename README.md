@@ -1,23 +1,29 @@
-[![Code style check](https://github.com/zondax/ledger-plugin-ens/actions/workflows/lint-workflow.yml/badge.svg)](https://github.com/zondax/ledger-plugin-ens/actions/workflows/lint-workflow.yml)
-[![Compilation & tests](https://github.com/zondax/ledger-plugin-ens/actions/workflows/ci-workflow.yml/badge.svg)](https://github.com/zondax/ledger-plugin-ens/actions/workflows/ci-workflow.yml)
+# Ledger Plugin ENS
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+---
 
-# Ledger ENS Plugin
+![zondax_light](docs/zondax_light.png#gh-light-mode-only)
+![zondax_dark](docs/zondax_dark.png#gh-dark-mode-only)
 
-This is a plugin for the Ethereum application which helps parsing and displaying relevant information when signing a ENS smart contract.
+_Please visit our website at [zondax.ch](https://www.zondax.ch)_
 
-## Prerequisite
+---
 
-Clone the plugin to a new folder.
+This is a plugin for the Ethereum application which helps parsing and displaying relevant information when signing a EigenLayer smart contract.
 
-```shell
-git clone https://github.com/libertify/ledger-plugin-ens.git
-```
+- Ledger Nano S/S+/X/Stax EigenLayer plugin
+- Specs / Documentation
+- Ragger tests
 
-Then in the same folder clone the app-ethereum.
+## ATTENTION
 
-```shell
-git clone --recurse-submodules https://github.com/LedgerHQ/app-ethereum.git     #app-ethereum
-```
+Please:
+
+- **Do not use in production**
+- **Do not use a Ledger device with funds for development purposes.**
+- **Have a separate and marked device that is used ONLY for development and testing**
+
+
 
 ## Documentation
 
@@ -66,23 +72,17 @@ Smart contracts covered by this plugin are:
 For multicall, ENS plugin will only support signing transactions with 3 calls maximum.
 For strings and byte arrays bigger then 32, plugin is showing the first and last 16 bytes in "16...16" format, due to memory limitations.
 
-## Build
+## How to build
 
-To build the plugin, go to your folder with Ethereum app and plugin. Open a new terminal window and run:
-```shell
-sudo docker run --rm -ti -v "$(realpath .):/app" -v "$(realpath app-ethereum):/plugin_dev/app-ethereum" --user $(id -u $USER):$(id -g $USER) ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
-```
+Ledger's recommended [plugin guide](https://developers.ledger.com/docs/dapp/embedded-plugin/code-overview/) is out-dated and doesn't work since they introduced a lot of new changes. Here's a simple way to get started with this repo:
+1. Clone this repo (along with git submodules)
+2. Install [Xquartz](https://www.xquartz.org/) and make sure you have enabled "Allow connections from network clients" enabled under "Security" settings.
+3. Install and start Docker (Note: If Docker is already running, quit and start it after starting Xquartz, otherwise docker cannot connect to Xquartz).
+4. Install the [Ledger Dev Tools VS Code plugin](https://marketplace.visualstudio.com/items?itemName=LedgerHQ.ledger-dev-tools#:~:text=ledger%2Dvscode%2Dextension,Plus%2C%20Nano%20X%2C%20Stax) and makes sure it's enabled
+5. Once you have installed the plugin and open the repo, the plugin should by default try to create and start the containers. If it doesn't, you can simply click "Update Container" under "Ledger Dev Tools" in the Activity Side Bar on VS Code.
+6. On the "Ledger Dev Tools" side bar, Select a target and then click on Build. 
+7. Once build is complete, click on "Run tests" to run the tests
 
-In the container, go to the plugin repository, then to the tests/ folder.
-```shell
-cd ledger-plugin-swell/tests
-./build_local_test_elfs.sh
-```
+## How to test
 
-## Tests
-
-To test the plugin go to the tests folder from the "ledger-plugin-swell" and run the script "test"
-```shell
-cd ledger-plugin-swell/tests         # go to the tests folder in ledger-plugin-swell
-yarn test                       # run the script test
-```
+More info on how to run the tests [here](https://github.com/Zondax/ledger-plugin-ens/blob/main/tests/README.md).

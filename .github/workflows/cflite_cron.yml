@@ -3,8 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - develop
+      - main  # Use your actual default branch here.
   schedule:
     - cron: '0 13 * * 6'  # At 01:00 PM, only on Saturday
 permissions: read-all
@@ -39,3 +38,4 @@ jobs:
         fuzz-seconds: 300 # 5 minutes
         mode: ${{ matrix.mode }}
         sanitizer: ${{ matrix.sanitizer }}
+     

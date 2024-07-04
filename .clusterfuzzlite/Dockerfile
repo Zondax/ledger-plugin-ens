@@ -4,11 +4,11 @@ FROM ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest AS LITE_
 FROM gcr.io/oss-fuzz-base/base-builder:v1
 
 # Copy the project's source code.
-COPY . $SRC/ledger-plugin-ens
-COPY --from=LITE_BUILDER /opt/nanox-secure-sdk $SRC/ledger-plugin-ens/BOLOS_SDK
+COPY . $SRC/app-plugin-ens
+COPY --from=LITE_BUILDER /opt/nanox-secure-sdk $SRC/app-plugin-ens/BOLOS_SDK
 
 # Working directory for build.sh
-WORKDIR $SRC/ledger-plugin-ens
+WORKDIR $SRC/app-plugin-ens
 
 # Copy build.sh into $SRC dir.
 COPY ./.clusterfuzzlite/build.sh $SRC/

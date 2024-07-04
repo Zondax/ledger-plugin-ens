@@ -9,6 +9,7 @@ The fuzzer needs to implement `int LLVMFuzzerTestOneInput(const uint8_t *data, s
 If the application crashes, or a [sanitizer](https://github.com/google/sanitizers) detects any kind of access violation, the fuzzing process is stopped, a report regarding the vulnerability is shown, and the input that triggered the bug is written to disk under the name `crash-*`. The vulnerable input file created can be passed as an argument to the fuzzer to triage the issue.
 
 > **Note**: Usually we want to write a separate fuzz target for each functionality.
+
 ## Manual usage based on Ledger container
 
 ### Preparation
@@ -64,17 +65,18 @@ More info can be found here:
 The principle is to build the container, and run it to perform the fuzzing.
 
 > **Note**: The container contains a copy of the sources (they are not cloned), which means the `docker build` command must be re-executed after each code modification.
+
 ```console
 # Prepare directory tree
 mkdir fuzzing/{corpus,out}
 # Container generation
-docker build -t ledger-plugin-ens --file .clusterfuzzlite/Dockerfile .
+docker build -t app-plugin-ens --file .clusterfuzzlite/Dockerfile .
 ```
 
 ### Compilation
 
 ```console
-docker run --rm --privileged -e FUZZING_LANGUAGE=c -v "$(realpath .)/fuzzing/out:/out" -ti ledger-plugin-ens
+docker run --rm --privileged -e FUZZING_LANGUAGE=c -v "$(realpath .)/fuzzing/out:/out" -ti app-plugin-ens
 ```
 
 ### Run
