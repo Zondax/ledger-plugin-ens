@@ -152,6 +152,161 @@ static void handle_register(ethPluginProvideParameter_t *msg, context_t *context
     }
 }
 
+static void handle_register_2(ethPluginProvideParameter_t *msg, context_t *context) {
+    uint16_t containers = 0;  // group of 32 bytes needed to hold name
+    uint16_t tmp_offset = 0;
+    if (context->go_to_offset) {
+        if (msg->parameterOffset != context->offset) {
+            return;
+        }
+        context->go_to_offset = false;
+    }
+    switch (context->next_param) {
+        case NAME_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.regist_2.offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            context->next_param = OWNER;
+            break;
+        case OWNER:
+            copy_address(context->tx.body.regist_2.owner.value,
+                         msg->parameter,
+                         sizeof(context->tx.body.regist_2.owner.value));
+            context->next_param = DURATION;
+            break;
+        case DURATION:
+            copy_parameter(context->tx.body.regist_2.duration.value,
+                           msg->parameter,
+                           sizeof(context->tx.body.regist_2.duration.value));
+            context->tx.body.regist_2.duration.ellipsis = false;
+            context->next_param = SECRET;
+            break;
+        case SECRET:
+            copy_parameter(context->tx.body.regist_2.secret.value,
+                           msg->parameter,
+                           sizeof(context->tx.body.regist_2.secret.value));
+            context->tx.body.regist_2.secret.ellipsis = false;
+            context->next_param = RESOLVER;
+            break;
+        case RESOLVER:
+            copy_address(context->tx.body.regist_2.resolver.value,
+                         msg->parameter,
+                         sizeof(context->tx.body.regist_2.resolver.value));
+            context->next_param = DATA_OFFSET;
+            break;
+        case DATA_OFFSET:
+            if (!U2BE_from_parameter(msg->parameter, &tmp_offset)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            context->next_param = REVERSE;
+            break;
+        case REVERSE:
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.regist_2.reverseRecord)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            context->next_param = CONTROLLED_FUSES;
+            break;
+        case CONTROLLED_FUSES:
+            if (!U2BE_from_parameter(msg->parameter,
+                                     &context->tx.body.regist_2.ownerControlledFuses)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            context->next_param = NAME_LENGTH;
+            break;
+        case NAME_LENGTH:
+            // if (msg->parameterOffset != context->tx.body.regist_2.offset + SELECTOR_SIZE) {
+            //     msg->result = ETH_PLUGIN_RESULT_ERROR;
+            //     return;
+            // }
+
+            if (!U2BE_from_parameter(msg->parameter, &context->tx.body.regist_2.name.len)) {
+                msg->result = ETH_PLUGIN_RESULT_ERROR;
+                return;
+            }
+            context->next_param = NAME;
+            break;
+        case NAME:
+            // Name has less then 32
+            if (context->tx.body.regist_2.name.len <= PARAMETER_LENGTH) {
+                copy_text(context->tx.body.regist_2.name.text,
+                          context->tx.body.regist_2.name.len,
+                          PARAMETER_LENGTH,
+                          msg->parameter);
+                context->tx.body.regist_2.name.ellipsis = false;
+                context->next_param = NONE;
+            } else {  // Name has more then 32 bytes
+                containers = context->tx.body.regist_2.name.len / PARAMETER_LENGTH;
+                bytes_missing = context->tx.body.regist_2.name.len % PARAMETER_LENGTH;
+                context->tx.body.regist_2.name.ellipsis = true;
+
+                // copy first 16 bytes
+                copy_text(context->tx.body.regist_2.name.text,
+                          context->tx.body.regist_2.name.len,
+                          HALF_PARAMETER_LENGTH,
+                          msg->parameter);
+
+                if (bytes_missing < HALF_PARAMETER_LENGTH) {
+                    if (containers < 2) {  // only one container we still need bytes from this
+                        // one to complete the last 16. then go to last container
+                        copy_text(context->tx.body.regist_2.name.text + HALF_PARAMETER_LENGTH,
+                                  context->tx.body.regist_2.name.len - HALF_PARAMETER_LENGTH,
+                                  HALF_PARAMETER_LENGTH - bytes_missing,
+                                  msg->parameter + HALF_PARAMETER_LENGTH + bytes_missing);
+
+                        context->offset = msg->parameterOffset + PARAMETER_LENGTH;
+                        context->go_to_offset = true;
+                        context->next_param = NAME_OFFSET_2;
+                    } else {  // more then 1 container go to second-last and get missing bytes to
+                              // complete the last 16
+                        context->offset =
+                            msg->parameterOffset + (containers - 1) * PARAMETER_LENGTH;
+                        context->go_to_offset = true;
+                        context->next_param = NAME_OFFSET_1;
+                    }
+                } else {  // last container has the last 16 bytes we need
+                    context->offset = msg->parameterOffset + containers * PARAMETER_LENGTH;
+                    context->go_to_offset = true;
+                    context->next_param = NAME_OFFSET_2;
+                }
+            }
+            break;
+        case NAME_OFFSET_1:  // second last container
+            copy_text(context->tx.body.regist_2.name.text + HALF_PARAMETER_LENGTH,
+                      context->tx.body.regist_2.name.len - HALF_PARAMETER_LENGTH,
+                      HALF_PARAMETER_LENGTH - bytes_missing,
+                      msg->parameter + HALF_PARAMETER_LENGTH + bytes_missing);
+            context->next_param = NAME_OFFSET_2;
+            break;
+        case NAME_OFFSET_2:                                // last container
+            if (bytes_missing <= HALF_PARAMETER_LENGTH) {  // copy missing bytes
+                copy_text(context->tx.body.regist_2.name.text + HALF_PARAMETER_LENGTH +
+                              (HALF_PARAMETER_LENGTH - bytes_missing),
+                          context->tx.body.regist_2.name.len - HALF_PARAMETER_LENGTH +
+                              (HALF_PARAMETER_LENGTH - bytes_missing),
+                          bytes_missing,
+                          msg->parameter);
+            } else {  // last container has 16 or more bytes, move the need offset to copy the last
+                      // 16 bytes
+                copy_text(context->tx.body.regist_2.name.text + HALF_PARAMETER_LENGTH,
+                          context->tx.body.regist_2.name.len - HALF_PARAMETER_LENGTH,
+                          HALF_PARAMETER_LENGTH,
+                          msg->parameter + (bytes_missing - HALF_PARAMETER_LENGTH));
+            }
+            context->next_param = NONE;
+            break;
+        case NONE:
+            break;
+        default:
+            PRINTF("Param not supported: %d\n", context->next_param);
+            msg->result = ETH_PLUGIN_RESULT_ERROR;
+            break;
+    }
+}
+
 static void handle_register_with_config(ethPluginProvideParameter_t *msg, context_t *context) {
     uint16_t containers = 0;  // group of 32 bytes needed to hold name
 
@@ -1851,6 +2006,9 @@ void handle_provide_parameter(ethPluginProvideParameter_t *msg) {
             break;
         case REGISTER:
             handle_register(msg, context);
+            break;
+        case REGISTER_2:
+            handle_register_2(msg, context);
             break;
         case REGISTER_WITH_CONFIG:
             handle_register_with_config(msg, context);

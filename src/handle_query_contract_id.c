@@ -14,6 +14,7 @@ void handle_query_contract_id(ethQueryContractID_t *msg) {
             strlcpy(msg->version, "Commit", msg->versionLength);
             break;
         case REGISTER:
+        case REGISTER_2:
             strlcpy(msg->version, "Register", msg->versionLength);
             break;
         case REGISTER_WITH_CONFIG:

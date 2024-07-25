@@ -43,6 +43,7 @@ void handle_init_contract(ethPluginInitContract_t *msg) {
             context->next_param = COMMITMENT;
             break;
         case REGISTER:
+        case REGISTER_2:
         case REGISTER_WITH_CONFIG:
         case RENEW:
         case SET_NAME:
