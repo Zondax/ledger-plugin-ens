@@ -87,6 +87,19 @@ static bool array_to_hexstr(char *dst,
     return true;
 }
 
+static bool set_bool_ui(ethQueryContractUI_t *msg, uint16_t val, const char *title) {
+    strlcpy(msg->title, title, msg->titleLength);
+
+    if (val == 0) {
+        snprintf(msg->msg, msg->msgLength, "%s", "False");
+        return true;
+    } else {
+        snprintf(msg->msg, msg->msgLength, "%s", "True");
+        return true;
+    }
+    return false;
+}
+
 static bool set_addr_ui(ethQueryContractUI_t *msg, address_t *address, const char *title) {
     strlcpy(msg->title, title, msg->titleLength);
     return set_address_ui(msg, address);
@@ -418,6 +431,42 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
             } else {
                 PRINTF("Received an invalid screenIndex\n");
                 ret = false;
+            }
+            break;
+        case REGISTER_2:
+            switch (msg->screenIndex) {
+                case 0:
+                    ret = set_name_ui(msg, &context->tx.body.regist_2.name, "Name");
+                    break;
+                case 1:
+                    ret = set_addr_ui(msg, &context->tx.body.regist_2.owner, "Owner");
+                    break;
+                case 2:
+                    ret = set_bytes32_as_int_unit_ui(msg,
+                                                     &context->tx.body.regist_2.duration,
+                                                     "Duration",
+                                                     "s");
+                    break;
+                case 3:
+                    ret = set_bytes32_ui(msg, &context->tx.body.regist_2.secret, "Secret");
+                    break;
+                case 4:
+                    ret = set_addr_ui(msg, &context->tx.body.regist_2.resolver, "Resolver");
+                    break;
+                case 5:
+                    ret = set_bool_ui(msg, context->tx.body.regist_2.reverseRecord, "Reserve Rec");
+                    break;
+                case 6:
+                    strlcpy(msg->title, "Owner Ctl Fuses", msg->titleLength);
+                    snprintf(msg->msg,
+                             msg->msgLength,
+                             "%d",
+                             context->tx.body.regist_2.ownerControlledFuses);
+                    ret = true;
+                    break;
+                default:
+                    PRINTF("Received an invalid screenIndex\n");
+                    ret = false;
             }
             break;
         default:

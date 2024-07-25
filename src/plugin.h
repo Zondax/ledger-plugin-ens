@@ -28,6 +28,7 @@
 #define SELECTORS_LIST(X)                   \
     X(COMMIT, 0xf14fcbc8)                   \
     X(REGISTER, 0x85f6d155)                 \
+    X(REGISTER_2, 0x74694a2b)               \
     X(REGISTER_WITH_CONFIG, 0xf7a16963)     \
     X(RENEW, 0xacf1a841)                    \
     X(SET_NAME, 0xc47f0027)                 \
@@ -58,7 +59,7 @@ typedef enum selector_e {
 extern const uint32_t SELECTORS[SELECTOR_COUNT];
 
 // Placeholder variant to be set when parsing is done but data is still being sent.
-#define NONE 45
+#define NONE 49
 
 #define HALF_PARAMETER_LENGTH 16
 
@@ -109,6 +110,9 @@ typedef enum {
     CALL_LEN,
     N_CALL,
     OFFSETS,
+    DATA_OFFSET,
+    REVERSE,
+    CONTROLLED_FUSES,
     UNEXPECTED_PARAMETER,
 } parameter;
 
@@ -140,6 +144,17 @@ typedef struct {
             bytes32_t secret;
             uint16_t offset;
         } regist;
+
+        struct {
+            name_t name;
+            address_t owner;
+            bytes32_t duration;
+            bytes32_t secret;
+            address_t resolver;
+            uint16_t offset;
+            uint16_t reverseRecord;
+            uint16_t ownerControlledFuses;
+        } regist_2;
 
         struct {
             name_t name;         // 32

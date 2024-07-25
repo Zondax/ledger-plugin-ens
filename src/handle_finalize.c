@@ -36,6 +36,9 @@ void handle_finalize(ethPluginFinalize_t *msg) {
         case MULTICALL:
             msg->numScreens = context->tx.body.multicall.n_calls;
             break;
+        case REGISTER_2:
+            msg->numScreens = 7;
+            break;
         default:
             msg->result = ETH_PLUGIN_RESULT_ERROR;
             return;
