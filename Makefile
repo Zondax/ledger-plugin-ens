@@ -21,6 +21,6 @@ APPNAME = "ENS"
 # Application version
 APPVERSION_M = 2
 APPVERSION_N = 0
-APPVERSION_P = 0
+APPVERSION_P = 1
 
 include ethereum-plugin-sdk/standard_plugin.mk
